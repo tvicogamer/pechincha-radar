@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Pechincha Radar</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#0b1020;color:#f5f7ff}
+main{max-width:760px;margin:auto;padding:20px}.card{background:#151c30;border:1px solid #29324b;border-radius:16px;padding:16px;margin:12px 0}
+h1{margin:0 0 6px}.muted{color:#aab3ca}label{display:block;margin:12px 0 5px}
+input,button{width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #39445f;background:#0f1526;color:#fff}
+button{cursor:pointer;background:#2563eb;border:0;margin-top:10px;font-weight:700}
+.offer{border-left:4px solid #22c55e}.price{font-size:25px;font-weight:800}.tag{display:inline-block;padding:4px 8px;border-radius:999px;background:#24304c;margin:3px;font-size:12px}
+a{color:#8ab4ff}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<div class="card">
+<h1>🎯 Pechincha Radar</h1>
+<div class="muted">Monitor de ofertas de contas de jogos — primeira versão.</div>
+<button id="notify">🔔 Ativar notificações</button>
+<div id="status" class="muted"></div>
+</div>
+
+<div class="card">
+<h2>Filtros</h2>
+<div class="grid">
+<div><label>Preço máximo (R$)</label><input id="maxPrice" type="number" value="100"></div>
+<div><label>Fichas mínimas</label><input id="minCoins" type="number" value="100000000"></div>
+<div><label>Lendários mínimos</label><input id="minLegendary" type="number" value="10"></div>
+<div><label>Nível mínimo</label><input id="minLevel" type="number" value="100"></div>
+</div>
+<label><input id="requireFull" type="checkbox"> Exigir taco(s) FULL</label>
+<button id="save">Salvar filtros</button>
+</div>
+
+<div class="card">
+<h2>Últimos achados</h2>
+<div id="offers"></div>
+</div>
+
+<div class="card">
+<h3>Como funciona</h3>
+<p class="muted">Esta interface filtra ofertas recebidas pelo backend. A versão completa usa um monitor agendado, verifica se o anúncio continua ativo, elimina duplicados e envia Web Push somente quando a oferta atende aos critérios.</p>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const sample=[
+ {title:"Conta 8 Ball Pool — exemplo",price:79.9,coins:1000000000,level:150,legendary:17,full:4,seller:"Exemplo",url:"#",active:true}
+];
+function filters(){return{
+ maxPrice:+$("maxPrice").value||Infinity,minCoins:+$("minCoins").value||0,
+ minLegendary:+$("minLegendary").value||0,minLevel:+$("minLevel").value||0,
+ requireFull:$("requireFull").checked}}
+function render(){
+ const f=filters();
+ const arr=sample.filter(o=>o.active&&o.price<=f.maxPrice&&o.coins>=f.minCoins&&o.legendary>=f.minLegendary&&o.level>=f.minLevel&&(!f.requireFull||o.full>0));
+ $("offers").innerHTML=arr.length?arr.map(o=>`<div class="card offer"><div class="price">R$ ${o.price.toFixed(2)}</div><b>${o.title}</b><div><span class="tag">${o.level} lvl</span><span class="tag">${o.legendary} lendários</span><span class="tag">${o.full} FULL</span><span class="tag">${o.coins.toLocaleString('pt-BR')} fichas</span></div><p>Vendedor: ${o.seller}<br>Status: ATIVO</p><a href="${o.url}" target="_blank">Abrir anúncio →</a></div>`).join(""):"<p class='muted'>Nenhuma oferta atende aos filtros.</p>";
+}
+$("save").onclick=()=>{localStorage.pr=JSON.stringify(filters());$("status").textContent="Filtros salvos neste aparelho.";render()};
+$("notify").onclick=async()=>{
+ if(!("Notification" in window)){ $("status").textContent="Este navegador não suporta notificações.";return}
+ const p=await Notification.requestPermission();
+ $("status").textContent=p==="granted"?"Notificações autorizadas. O backend poderá enviar alertas quando conectado.":"Permissão de notificações não concedida.";
+};
+try{const f=JSON.parse(localStorage.pr||"null");if(f){$("maxPrice").value=f.maxPrice;$("minCoins").value=f.minCoins;$("minLegendary").value=f.minLegendary;$("minLevel").value=f.minLevel;$("requireFull").checked=f.requireFull}}catch(e){}
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+render();
+</script>
+</body>
+</html>
